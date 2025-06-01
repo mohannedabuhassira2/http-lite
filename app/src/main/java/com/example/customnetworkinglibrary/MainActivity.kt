@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.example.httplite.client.NetworkClient
+import com.example.httplite.response.ApiResult
 import org.json.JSONObject
 
 // TODO: Refactor to MVVM
@@ -60,7 +61,15 @@ class MainActivity : ComponentActivity() {
     }
 
     suspend fun fetchTodo(networkManager: NetworkClient): String {
-        val response = networkManager.get<JSONObject>("https://jsonplaceholder.typicode.com/todos/1")
-        return response.data.toString(2)
+        val apiResult = networkManager.get<JSONObject>("https://jsonplaceholder.typicode.com/todos/1")
+        return when (apiResult) {
+            is ApiResult.Response<JSONObject> -> {
+                val statusCode = apiResult.statusCode
+                val data = apiResult.data
+                "Status Code: $statusCode, Data: $data"
+            }
+            is ApiResult.SerializationFailed -> apiResult.exception.message.toString()
+            is ApiResult.NetworkFailed -> apiResult.exception.message.toString()
+        }
     }
 }

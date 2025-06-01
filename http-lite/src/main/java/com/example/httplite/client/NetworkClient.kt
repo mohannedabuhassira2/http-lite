@@ -1,19 +1,17 @@
 package com.example.httplite.client
 
-import com.google.gson.Gson
-import com.google.gson.JsonSyntaxException
 import com.example.httplite.request.Request
 import com.example.httplite.request.RequestFactory
-import com.example.httplite.response.ApiException
-import com.example.httplite.response.ApiResponse
-import com.example.httplite.response.HttpResponse
+import com.example.httplite.response.ApiResult
+import com.google.gson.Gson
+import com.google.gson.JsonSyntaxException
 import java.io.IOException
 import java.util.UUID
 
 class NetworkClient(
     val baseUrl: String,
     baseQueryParams: Map<String, String> = emptyMap<String, String>(),
-    private val gson: Gson = Gson()
+    val gson: Gson = Gson()
 ) {
     val requestFactory: RequestFactory = RequestFactory(
         baseUrl,
@@ -21,17 +19,12 @@ class NetworkClient(
         gson
     )
 
-    @Throws(
-        IOException::class,
-        ApiException::class,
-        JsonSyntaxException::class
-    )
-    suspend inline fun <reified R> get(
+    suspend inline fun <reified T> get(
         url: String = baseUrl,
         headers: Map<String, String> = emptyMap(),
         queryParams: Map<String, String> = emptyMap(),
         queryPath: String = "",
-    ): ApiResponse<R> {
+    ): ApiResult<T> {
         val request = requestFactory.createJsonRequest(
             url = url,
             method = Request.Method.GET,
@@ -39,22 +32,16 @@ class NetworkClient(
             queryParams = queryParams,
             queryPath = queryPath
         )
-        val httpResponse = request.execute()
-        return httpResponse.toApiResponse<R>()
+        return apiCall<T>(request)
     }
 
-    @Throws(
-        IOException::class,
-        ApiException::class,
-        JsonSyntaxException::class
-    )
     suspend inline fun <reified T> post(
         url: String = baseUrl,
         headers: Map<String, String> = emptyMap(),
         queryParams: Map<String, String> = emptyMap(),
         queryPath: String = "",
         body: Any,
-    ): ApiResponse<T> {
+    ): ApiResult<T> {
         val request = requestFactory.createJsonRequest(
             method = Request.Method.POST,
             url = url,
@@ -63,22 +50,16 @@ class NetworkClient(
             queryPath = queryPath,
             body = gson.toJson(body).toByteArray()
         )
-        val httpResponse = request.execute()
-        return httpResponse.toApiResponse<T>()
+        return apiCall<T>(request)
     }
 
-    @Throws(
-        IOException::class,
-        ApiException::class,
-        JsonSyntaxException::class
-    )
     suspend inline fun <reified T> postWithUrlEncoded(
         url: String = baseUrl,
         headers: Map<String, String> = emptyMap(),
         queryParams: Map<String, String> = emptyMap(),
         queryPath: String = "",
         encodedBodyParams: Map<String, String>,
-    ): ApiResponse<T> {
+    ): ApiResult<T> {
         val request = requestFactory.createUrlEncodedJsonRequest(
             method = Request.Method.POST,
             url = url,
@@ -87,15 +68,9 @@ class NetworkClient(
             queryPath = queryPath,
             encodedBodyParams = encodedBodyParams
         )
-        val httpResponse = request.execute()
-        return httpResponse.toApiResponse<T>()
+        return apiCall<T>(request)
     }
 
-    @Throws(
-        IOException::class,
-        ApiException::class,
-        JsonSyntaxException::class
-    )
     suspend inline fun <reified T> postWithFormData(
         url: String = baseUrl,
         headers: Map<String, String> = emptyMap(),
@@ -104,7 +79,7 @@ class NetworkClient(
         data: Map<String, Any>,
         dataKey: String,
         boundary: String = UUID.randomUUID().toString()
-    ): ApiResponse<T> {
+    ): ApiResult<T> {
         val request = requestFactory.createFormDataRequest(
             method = Request.Method.POST,
             url = url,
@@ -115,22 +90,16 @@ class NetworkClient(
             dataKey = dataKey,
             boundary = boundary
         )
-        val httpResponse = request.execute()
-        return httpResponse.toApiResponse<T>()
+        return apiCall<T>(request)
     }
 
-    @Throws(
-        IOException::class,
-        ApiException::class,
-        JsonSyntaxException::class
-    )
     suspend inline fun <reified T> put(
         url: String = baseUrl,
         headers: Map<String, String> = emptyMap(),
         queryParams: Map<String, String> = emptyMap(),
         queryPath: String = "",
         body: Any,
-    ): ApiResponse<T> {
+    ): ApiResult<T> {
         val request = requestFactory.createJsonRequest(
             method = Request.Method.PUT,
             url = url,
@@ -139,22 +108,16 @@ class NetworkClient(
             queryPath = queryPath,
             body = gson.toJson(body).toByteArray()
         )
-        val httpResponse = request.execute()
-        return httpResponse.toApiResponse<T>()
+        return apiCall<T>(request)
     }
 
-    @Throws(
-        IOException::class,
-        ApiException::class,
-        JsonSyntaxException::class
-    )
     suspend inline fun <reified T> putWithUrlEncoded(
         url: String = baseUrl,
         headers: Map<String, String> = emptyMap(),
         queryParams: Map<String, String> = emptyMap(),
         queryPath: String = "",
         encodedBodyParams: Map<String, String>,
-    ): ApiResponse<T> {
+    ): ApiResult<T> {
         val request = requestFactory.createUrlEncodedJsonRequest(
             method = Request.Method.PUT,
             url = url,
@@ -163,15 +126,9 @@ class NetworkClient(
             queryPath = queryPath,
             encodedBodyParams = encodedBodyParams
         )
-        val httpResponse = request.execute()
-        return httpResponse.toApiResponse<T>()
+        return apiCall<T>(request)
     }
 
-    @Throws(
-        IOException::class,
-        ApiException::class,
-        JsonSyntaxException::class
-    )
     suspend inline fun <reified T> putWithFormData(
         url: String = baseUrl,
         headers: Map<String, String> = emptyMap(),
@@ -180,7 +137,7 @@ class NetworkClient(
         data: Map<String, Any>,
         dataKey: String,
         boundary: String = UUID.randomUUID().toString()
-    ): ApiResponse<T> {
+    ): ApiResult<T> {
         val request = requestFactory.createFormDataRequest(
             method = Request.Method.PUT,
             url = url,
@@ -191,20 +148,29 @@ class NetworkClient(
             dataKey = dataKey,
             boundary = boundary
         )
-        val httpResponse = request.execute()
-        return httpResponse.toApiResponse<T>()
+        return apiCall<T>(request)
     }
 
-    @Throws(JsonSyntaxException::class)
-    inline fun <reified T> HttpResponse.toApiResponse(): ApiResponse<T> {
-        val data = gson.fromJson<T>(
-            jsonBody,
-            T::class.java
-        )
-        return ApiResponse<T>(
-            data = data,
-            headers = headers,
-            statusCode = statusCode
-        )
+    suspend inline fun <reified T> apiCall(
+        request: Request
+    ): ApiResult<T> {
+        return try {
+            val httpResponse = request.execute()
+
+            val parsedHttpResponse = gson.fromJson<T>(
+                httpResponse.jsonBody,
+                T::class.java
+            )
+
+            ApiResult.Response<T>(
+                data = parsedHttpResponse,
+                headers = httpResponse.headers,
+                statusCode = httpResponse.statusCode
+            )
+        } catch (jsonException: JsonSyntaxException) {
+            ApiResult.SerializationFailed(jsonException)
+        } catch (ioException: IOException) {
+            ApiResult.NetworkFailed(ioException)
+        }
     }
 }
