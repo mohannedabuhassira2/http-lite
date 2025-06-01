@@ -5,7 +5,7 @@ import com.example.httplite.model.MediaData
 import java.io.ByteArrayOutputStream
 import java.util.UUID
 
-class FormDataOutputBuilder(
+internal class FormDataOutputBuilder(
     private val boundary: String = UUID.randomUUID().toString(),
     private val gson: Gson
 ) {

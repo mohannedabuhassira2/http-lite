@@ -1,13 +1,14 @@
 package com.example.httplite.request
 
+import core.api.request.Request
 import com.example.httplite.response.HttpResponse
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
-class RequestExecutor(
-    private val request: Request,
+internal class RequestExecutor(
+    private val request: Request
 ) {
     @Throws(IOException::class)
     fun execute(): HttpResponse {

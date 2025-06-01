@@ -1,12 +1,12 @@
-package com.example.httplite.request
+package core.api.request
 
 import android.net.Uri
+import com.example.httplite.request.RequestExecutor
 import com.example.httplite.response.HttpResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.IOException
 
-class Request(
+internal class Request(
     val method: Method,
     val url: String,
     var headers: Map<String, String> = emptyMap(),
@@ -18,7 +18,6 @@ class Request(
         GET, POST, PUT, DELETE
     }
 
-    @Throws(IOException::class)
     suspend fun execute(): HttpResponse = withContext(Dispatchers.IO) {
         RequestExecutor(
             this@Request

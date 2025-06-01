@@ -1,23 +1,23 @@
 package com.example.httplite.client
 
 import android.net.http.HttpResponseCache
-import com.example.httplite.request.Request
-import com.example.httplite.request.RequestFactory
-import com.example.httplite.response.ApiResult
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
+import core.api.request.Request
+import com.example.httplite.request.RequestFactory
+import com.example.httplite.response.ApiResult
 import java.io.File
 import java.io.IOException
 import java.util.UUID
 
 class NetworkClient(
-    val baseUrl: String,
+    private val baseUrl: String,
     baseQueryParams: Map<String, String> = emptyMap<String, String>(),
-    val gson: Gson = Gson(),
-    private val cacheDirectory: String?,
+    private val cacheDirectory: String? = null,
     private val cacheSizeBytes: Long = CACHE_SIZE_BYTES
 ) {
-    val requestFactory: RequestFactory = RequestFactory(
+    private var gson: Gson = Gson()
+    private val requestFactory: RequestFactory = RequestFactory(
         baseUrl,
         baseQueryParams,
         gson
@@ -27,7 +27,8 @@ class NetworkClient(
         setUpCache()
     }
 
-    suspend inline fun <reified T> get(
+    suspend fun <T> get(
+        responseClass: Class<T>,
         url: String = baseUrl,
         headers: Map<String, String> = emptyMap(),
         queryParams: Map<String, String> = emptyMap(),
@@ -40,10 +41,14 @@ class NetworkClient(
             queryParams = queryParams,
             queryPath = queryPath
         )
-        return startApiCall<T>(request)
+        return startApiCall(
+            responseClass,
+            request
+        )
     }
 
-    suspend inline fun <reified T> post(
+    suspend fun <T> post(
+        responseClass: Class<T>,
         url: String = baseUrl,
         headers: Map<String, String> = emptyMap(),
         queryParams: Map<String, String> = emptyMap(),
@@ -58,10 +63,14 @@ class NetworkClient(
             queryPath = queryPath,
             body = gson.toJson(body).toByteArray()
         )
-        return startApiCall<T>(request)
+        return startApiCall<T>(
+            responseClass,
+            request
+        )
     }
 
-    suspend inline fun <reified T> postWithUrlEncoded(
+    suspend fun <T> postWithUrlEncoded(
+        responseClass: Class<T>,
         url: String = baseUrl,
         headers: Map<String, String> = emptyMap(),
         queryParams: Map<String, String> = emptyMap(),
@@ -76,10 +85,14 @@ class NetworkClient(
             queryPath = queryPath,
             encodedBodyParams = encodedBodyParams
         )
-        return startApiCall<T>(request)
+        return startApiCall<T>(
+            responseClass,
+            request
+        )
     }
 
-    suspend inline fun <reified T> postWithFormData(
+    suspend fun <T> postWithFormData(
+        responseClass: Class<T>,
         url: String = baseUrl,
         headers: Map<String, String> = emptyMap(),
         queryParams: Map<String, String> = emptyMap(),
@@ -98,10 +111,14 @@ class NetworkClient(
             dataKey = dataKey,
             boundary = boundary
         )
-        return startApiCall<T>(request)
+        return startApiCall<T>(
+            responseClass,
+            request
+        )
     }
 
-    suspend inline fun <reified T> put(
+    suspend fun <T> put(
+        responseClass: Class<T>,
         url: String = baseUrl,
         headers: Map<String, String> = emptyMap(),
         queryParams: Map<String, String> = emptyMap(),
@@ -116,10 +133,14 @@ class NetworkClient(
             queryPath = queryPath,
             body = gson.toJson(body).toByteArray()
         )
-        return startApiCall<T>(request)
+        return startApiCall<T>(
+            responseClass,
+            request
+        )
     }
 
-    suspend inline fun <reified T> putWithUrlEncoded(
+    suspend fun <T> putWithUrlEncoded(
+        responseClass: Class<T>,
         url: String = baseUrl,
         headers: Map<String, String> = emptyMap(),
         queryParams: Map<String, String> = emptyMap(),
@@ -134,10 +155,14 @@ class NetworkClient(
             queryPath = queryPath,
             encodedBodyParams = encodedBodyParams
         )
-        return startApiCall<T>(request)
+        return startApiCall<T>(
+            responseClass,
+            request
+        )
     }
 
-    suspend inline fun <reified T> putWithFormData(
+    suspend fun <T> putWithFormData(
+        responseClass: Class<T>,
         url: String = baseUrl,
         headers: Map<String, String> = emptyMap(),
         queryParams: Map<String, String> = emptyMap(),
@@ -156,10 +181,18 @@ class NetworkClient(
             dataKey = dataKey,
             boundary = boundary
         )
-        return startApiCall<T>(request)
+        return startApiCall<T>(
+            responseClass,
+            request
+        )
     }
 
-    suspend inline fun <reified T> startApiCall(
+    fun setGson(gson: Gson) {
+        this.gson = gson
+    }
+
+    private suspend fun <T> startApiCall(
+        responseClass: Class<T>,
         request: Request
     ): ApiResult<T> {
         return try {
@@ -167,7 +200,7 @@ class NetworkClient(
 
             val parsedHttpResponse = gson.fromJson<T>(
                 httpResponse.jsonBody,
-                T::class.java
+                responseClass
             )
 
             ApiResult.Response<T>(

@@ -17,13 +17,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.example.customnetworkinglibrary.networking.model.Todo
 import com.example.httplite.client.NetworkClient
 import com.example.httplite.response.ApiResult
-import org.json.JSONObject
 
 // TODO: Refactor to MVVM
 class MainActivity : ComponentActivity() {
-    private val networkManager = NetworkClient(
+    private val networkClient = NetworkClient(
         baseUrl = "https://jsonplaceholder.typicode.com"
     )
 
@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
 
         LaunchedEffect(Unit) {
             httpResult = try {
-                fetchTodo(networkManager)
+                fetchTodo(networkClient)
             } catch (e: Exception) {
                 "${e.message}"
             }
@@ -53,7 +53,7 @@ class MainActivity : ComponentActivity() {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Text(text = httpResult)
             }
@@ -61,12 +61,16 @@ class MainActivity : ComponentActivity() {
     }
 
     suspend fun fetchTodo(networkManager: NetworkClient): String {
-        val apiResult = networkManager.get<JSONObject>("https://jsonplaceholder.typicode.com/todos/1")
+        val apiResult = networkManager.get<Todo>(
+            queryPath = "/todos/1",
+            responseClass = Todo::class.java
+        )
+
         return when (apiResult) {
-            is ApiResult.Response<JSONObject> -> {
+            is ApiResult.Response<Todo> -> {
                 val statusCode = apiResult.statusCode
                 val data = apiResult.data
-                "Status Code: $statusCode, Data: $data"
+                "Status Code: $statusCode, \nData: ${data}"
             }
             is ApiResult.SerializationFailed -> apiResult.exception.message.toString()
             is ApiResult.NetworkFailed -> apiResult.exception.message.toString()
