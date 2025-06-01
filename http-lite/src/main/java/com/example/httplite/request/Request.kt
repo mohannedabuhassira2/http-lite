@@ -1,6 +1,8 @@
-package com.example.httplite
+package com.example.httplite.request
 
 import android.net.Uri
+import com.example.httplite.model.ApiException
+import com.example.httplite.model.HttpResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -8,32 +10,29 @@ import java.io.IOException
 class Request(
     val method: Method,
     val url: String,
-    val headers: Map<String, String> = emptyMap(),
+    var headers: Map<String, String> = emptyMap(),
     val queryParams: Map<String, String> = emptyMap(),
     val queryPath: String = "",
     val body: ByteArray? = null
 ) {
     enum class Method {
-        GET, POST, DELETE, PUT
+        GET, POST, PUT, DELETE
     }
 
     @Throws(IOException::class, ApiException::class)
     suspend fun execute(): HttpResponse = withContext(Dispatchers.IO) {
         RequestExecutor(
-            this@Request,
-            url.buildUrl(
-                queryParams,
-                queryPath
-            ),
-            body
+            this@Request
         ).execute()
     }
 
-    private fun String.buildUrl(
+    fun buildUrl(
         queryParams: Map<String, String> = emptyMap(),
         queryPath: String = ""
     ): String {
-        val baseUri = Uri.parse(this).buildUpon()
+        val baseUri = Uri
+            .parse(url)
+            .buildUpon()
 
         if (queryPath.isNotBlank()) {
             queryPath

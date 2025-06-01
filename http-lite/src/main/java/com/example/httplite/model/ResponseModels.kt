@@ -1,4 +1,4 @@
-package com.example.httplite
+package com.example.httplite.model
 
 data class HttpResponse(
     val statusCode: Int,

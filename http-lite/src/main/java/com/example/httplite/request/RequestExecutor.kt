@@ -1,15 +1,20 @@
-package com.example.httplite
+package com.example.httplite.request
 
+import com.example.httplite.model.ApiException
+import com.example.httplite.model.HttpResponse
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
-internal class RequestExecutor(
+class RequestExecutor(
     private val request: Request,
-    private val url: String,
-    private val body: ByteArray?
 ) {
+    private val url: String = request.buildUrl(
+        request.queryParams,
+        request.queryPath
+    )
+
     @Throws(IOException::class, ApiException::class)
     fun execute(): HttpResponse {
         val connection = getHttpURLConnection()
@@ -22,7 +27,6 @@ internal class RequestExecutor(
         )
     }
 
-    // TODO: Refactor to have a connection / request builder that decides between a json request vs. multipart request
     @Throws(IOException::class)
     private fun getHttpURLConnection(): HttpURLConnection {
         val connection = URL(url).openConnection() as HttpURLConnection
@@ -33,9 +37,8 @@ internal class RequestExecutor(
             connection.setRequestProperty(header, headerValue)
         }
 
-        body?.let { requestBody ->
+        request.body?.let { requestBody ->
             connection.doOutput = true
-            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
             connection.outputStream.use { it.write(requestBody) }
         }
 
