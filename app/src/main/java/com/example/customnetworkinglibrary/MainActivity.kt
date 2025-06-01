@@ -17,12 +17,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.example.httplite.Http
-import com.example.httplite.JSONObjectListener
-import org.json.JSONObject
+import com.example.httplite.NetworkManager
 
 // TODO: Refactor to MVVM
 class MainActivity : ComponentActivity() {
+    private val networkManager = NetworkManager(
+        baseUrl = "https://jsonplaceholder.typicode.com"
+    )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -34,11 +36,13 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun MyScreen() {
-        var title by remember { mutableStateOf("Loading...") }
+        var httpResult by remember { mutableStateOf("Loading...") }
 
         LaunchedEffect(Unit) {
-            fetchTodo { result ->
-                title = result
+            httpResult = try {
+                fetchTodo(networkManager)
+            } catch (e: Exception) {
+                "${e.message}"
             }
         }
 
@@ -49,22 +53,13 @@ class MainActivity : ComponentActivity() {
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = title)
+                Text(text = httpResult)
             }
         }
     }
 
-    fun fetchTodo(onResult: (String) -> Unit) {
-        Http.Request(Http.Method.GET)
-            .url("https://jsonplaceholder.typicode.com/todos/1")
-            .makeRequest(object : JSONObjectListener {
-                override fun onResponse(res: JSONObject?) {
-                    onResult(res?.toString(4) ?: "No title")
-                }
-
-                override fun onFailure(e: Exception?) {
-                    onResult("Failed: ${e?.message ?: "Unknown error"}")
-                }
-            })
+    suspend fun fetchTodo(networkManager: NetworkManager): String {
+        val response = networkManager.get("https://jsonplaceholder.typicode.com/todos/1")
+        return response.jsonBody
     }
 }
