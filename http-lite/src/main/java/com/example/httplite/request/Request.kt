@@ -2,7 +2,6 @@ package com.example.httplite.request
 
 import android.net.Uri
 import com.example.httplite.response.HttpResponse
-import com.example.httplite.response.ApiException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -19,7 +18,7 @@ class Request(
         GET, POST, PUT, DELETE
     }
 
-    @Throws(IOException::class, ApiException::class)
+    @Throws(IOException::class)
     suspend fun execute(): HttpResponse = withContext(Dispatchers.IO) {
         RequestExecutor(
             this@Request

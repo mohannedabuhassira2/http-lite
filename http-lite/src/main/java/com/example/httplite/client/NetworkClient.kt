@@ -1,23 +1,31 @@
 package com.example.httplite.client
 
+import android.net.http.HttpResponseCache
 import com.example.httplite.request.Request
 import com.example.httplite.request.RequestFactory
 import com.example.httplite.response.ApiResult
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
+import java.io.File
 import java.io.IOException
 import java.util.UUID
 
 class NetworkClient(
     val baseUrl: String,
     baseQueryParams: Map<String, String> = emptyMap<String, String>(),
-    val gson: Gson = Gson()
+    val gson: Gson = Gson(),
+    private val cacheDirectory: String?,
+    private val cacheSizeBytes: Long = CACHE_SIZE_BYTES
 ) {
     val requestFactory: RequestFactory = RequestFactory(
         baseUrl,
         baseQueryParams,
         gson
     )
+
+    init {
+        setUpCache()
+    }
 
     suspend inline fun <reified T> get(
         url: String = baseUrl,
@@ -32,7 +40,7 @@ class NetworkClient(
             queryParams = queryParams,
             queryPath = queryPath
         )
-        return apiCall<T>(request)
+        return startApiCall<T>(request)
     }
 
     suspend inline fun <reified T> post(
@@ -50,7 +58,7 @@ class NetworkClient(
             queryPath = queryPath,
             body = gson.toJson(body).toByteArray()
         )
-        return apiCall<T>(request)
+        return startApiCall<T>(request)
     }
 
     suspend inline fun <reified T> postWithUrlEncoded(
@@ -68,7 +76,7 @@ class NetworkClient(
             queryPath = queryPath,
             encodedBodyParams = encodedBodyParams
         )
-        return apiCall<T>(request)
+        return startApiCall<T>(request)
     }
 
     suspend inline fun <reified T> postWithFormData(
@@ -90,7 +98,7 @@ class NetworkClient(
             dataKey = dataKey,
             boundary = boundary
         )
-        return apiCall<T>(request)
+        return startApiCall<T>(request)
     }
 
     suspend inline fun <reified T> put(
@@ -108,7 +116,7 @@ class NetworkClient(
             queryPath = queryPath,
             body = gson.toJson(body).toByteArray()
         )
-        return apiCall<T>(request)
+        return startApiCall<T>(request)
     }
 
     suspend inline fun <reified T> putWithUrlEncoded(
@@ -126,7 +134,7 @@ class NetworkClient(
             queryPath = queryPath,
             encodedBodyParams = encodedBodyParams
         )
-        return apiCall<T>(request)
+        return startApiCall<T>(request)
     }
 
     suspend inline fun <reified T> putWithFormData(
@@ -148,10 +156,10 @@ class NetworkClient(
             dataKey = dataKey,
             boundary = boundary
         )
-        return apiCall<T>(request)
+        return startApiCall<T>(request)
     }
 
-    suspend inline fun <reified T> apiCall(
+    suspend inline fun <reified T> startApiCall(
         request: Request
     ): ApiResult<T> {
         return try {
@@ -164,7 +172,7 @@ class NetworkClient(
 
             ApiResult.Response<T>(
                 data = parsedHttpResponse,
-                headers = httpResponse.headers,
+                headers = emptyMap<String, String>(),
                 statusCode = httpResponse.statusCode
             )
         } catch (jsonException: JsonSyntaxException) {
@@ -172,5 +180,28 @@ class NetworkClient(
         } catch (ioException: IOException) {
             ApiResult.NetworkFailed(ioException)
         }
+    }
+
+    private fun setUpCache() {
+        if (cacheDirectory == null || HttpResponseCache.getInstalled() != null) {
+            return
+        }
+
+        val httpCacheDir = File(
+            cacheDirectory,
+            "http-cache"
+        )
+        val httpCacheFile = File(
+            httpCacheDir,
+            "http"
+        )
+        HttpResponseCache.install(
+            httpCacheFile,
+            cacheSizeBytes
+        )
+    }
+
+    private companion object {
+        const val CACHE_SIZE_BYTES = 128 * 1024L
     }
 }

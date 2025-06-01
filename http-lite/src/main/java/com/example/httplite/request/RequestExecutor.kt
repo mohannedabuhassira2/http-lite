@@ -1,6 +1,5 @@
 package com.example.httplite.request
 
-import com.example.httplite.response.ApiException
 import com.example.httplite.response.HttpResponse
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -10,7 +9,7 @@ import java.net.URL
 class RequestExecutor(
     private val request: Request,
 ) {
-    @Throws(IOException::class, ApiException::class)
+    @Throws(IOException::class)
     fun execute(): HttpResponse {
         val connection = startConnection()
         val rawResponseBody = parseResponse(connection)
@@ -30,6 +29,7 @@ class RequestExecutor(
 
             connection.requestMethod = request.method.toString()
             connection.connectTimeout = CONNECTION_TIMEOUT_MS
+            connection.useCaches = true
 
             request.headers.forEach { (header, headerValue) ->
                 connection.setRequestProperty(header, headerValue)
@@ -46,13 +46,8 @@ class RequestExecutor(
         }
     }
 
-    @Throws(IOException::class, ApiException::class)
+    @Throws(IOException::class)
     private fun parseResponse(connection: HttpURLConnection): ByteArray {
-        val status = connection.responseCode
-        if (connection.isInvalidResponse()) {
-            throw ApiException("Request ${request.buildUrl()} failed with invalid status code: $status")
-        }
-
         return try {
             val inputStream = connection.inputStream
             val outputStream = ByteArrayOutputStream()
@@ -68,9 +63,6 @@ class RequestExecutor(
             .mapKeys { it.key?.lowercase() ?: "" }
             .mapValues { it.value.firstOrNull() ?: "" }
     }
-
-    private fun HttpURLConnection.isInvalidResponse(): Boolean =
-        responseCode < 200 || responseCode > 299
 
     private companion object {
         const val BUFFER_SIZE = 1024
