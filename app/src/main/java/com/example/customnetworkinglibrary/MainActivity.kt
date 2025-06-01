@@ -17,11 +17,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.example.httplite.NetworkManager
+import com.example.httplite.client.NetworkClient
+import org.json.JSONObject
 
 // TODO: Refactor to MVVM
 class MainActivity : ComponentActivity() {
-    private val networkManager = NetworkManager(
+    private val networkManager = NetworkClient(
         baseUrl = "https://jsonplaceholder.typicode.com"
     )
 
@@ -58,8 +59,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    suspend fun fetchTodo(networkManager: NetworkManager): String {
-        val response = networkManager.get("https://jsonplaceholder.typicode.com/todos/1")
-        return response.jsonBody
+    suspend fun fetchTodo(networkManager: NetworkClient): String {
+        val response = networkManager.get<JSONObject>("https://jsonplaceholder.typicode.com/todos/1")
+        return response.data.toString(2)
     }
 }

@@ -1,8 +1,8 @@
 package com.example.httplite.request
 
 import android.net.Uri
-import com.example.httplite.model.ApiException
-import com.example.httplite.model.HttpResponse
+import com.example.httplite.response.HttpResponse
+import com.example.httplite.response.ApiException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -26,10 +26,7 @@ class Request(
         ).execute()
     }
 
-    fun buildUrl(
-        queryParams: Map<String, String> = emptyMap(),
-        queryPath: String = ""
-    ): String {
+    fun buildUrl(): String {
         val baseUri = Uri
             .parse(url)
             .buildUpon()
@@ -45,6 +42,8 @@ class Request(
             baseUri.appendQueryParameter(key, value)
         }
 
-        return baseUri.build().toString()
+        return baseUri
+            .build()
+            .toString()
     }
 }
