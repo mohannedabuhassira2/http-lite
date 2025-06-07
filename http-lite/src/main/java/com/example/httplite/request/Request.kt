@@ -1,26 +1,25 @@
-package core.api.request
+package com.example.httplite.request
 
 import android.net.Uri
-import com.example.httplite.request.RequestExecutor
-import com.example.httplite.response.HttpResponse
+import com.example.httplite.response.RawResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 internal class Request(
-    val method: Method,
-    val url: String,
+    var method: Method,
+    var url: String,
     var headers: Map<String, String> = emptyMap(),
-    val queryParams: Map<String, String> = emptyMap(),
-    val queryPath: String = "",
-    val body: ByteArray? = null
+    var queryParams: Map<String, String> = emptyMap(),
+    var queryPath: String = "",
+    var body: ByteArray? = null,
 ) {
     enum class Method {
         GET, POST, PUT, DELETE
     }
 
-    suspend fun execute(): HttpResponse = withContext(Dispatchers.IO) {
+    suspend fun execute(): RawResponse = withContext(Dispatchers.IO) {
         RequestExecutor(
-            this@Request
+            request = this@Request
         ).execute()
     }
 

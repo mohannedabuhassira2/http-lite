@@ -1,68 +1,79 @@
 package com.example.httplite.request
 
-import core.api.request.Request
-import com.example.httplite.response.HttpResponse
+import com.example.httplite.response.RawResponse
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
 internal class RequestExecutor(
-    private val request: Request
+    private val request: Request,
 ) {
     @Throws(IOException::class)
-    fun execute(): HttpResponse {
-        val connection = startConnection()
-        val rawResponseBody = parseResponse(connection)
+    fun execute(): RawResponse {
+        val connection = startConnection(request)
+        val code = connection.responseCode
+        val headers = connection.headerFields.asHeaders()
+        val isSuccessful = code in 200..299
 
-        return HttpResponse(
-            statusCode = connection.responseCode,
-            headers = connection.headerFields.cleanHeaders(),
-            jsonBody = rawResponseBody.decodeToString()
+        val stream = if (isSuccessful) {
+            connection.inputStream
+        } else {
+            connection.errorStream
+        }
+        val rawBody = connection
+            .readStream(stream)
+            .decodeToString()
+
+        return RawResponse(
+            code = code,
+            headers = headers,
+            body = rawBody.takeIf { isSuccessful },
+            errorBody = rawBody.takeIf { !isSuccessful }
         )
     }
 
     @Throws(IOException::class)
-    private fun startConnection(): HttpURLConnection {
-        try {
-            val fullUrl = URL(request.buildUrl())
-            val connection = fullUrl.openConnection() as HttpURLConnection
+    private fun startConnection(
+        request: Request
+    ): HttpURLConnection {
+        val fullUrl = URL(request.buildUrl())
+        val connection = fullUrl.openConnection() as HttpURLConnection
 
-            connection.requestMethod = request.method.toString()
-            connection.connectTimeout = CONNECTION_TIMEOUT_MS
-            connection.useCaches = true
+        connection.requestMethod = request.method.toString()
+        connection.connectTimeout = CONNECTION_TIMEOUT_MS
+        connection.useCaches = true
 
-            request.headers.forEach { (header, headerValue) ->
-                connection.setRequestProperty(header, headerValue)
-            }
-
-            request.body?.let { requestBody ->
-                connection.doOutput = true
-                connection.outputStream.use { it.write(requestBody) }
-            }
-
-            return connection
-        } catch (e: Exception) {
-            throw IOException("Failed to create or configure HTTP connection: ${e.message}", e)
+        request.headers.forEach { (header, headerValue) ->
+            connection.setRequestProperty(header, headerValue)
         }
+
+        request.body?.let { requestBody ->
+            connection.doOutput = true
+            connection.outputStream.use { it.write(requestBody) }
+        }
+
+        return connection
     }
 
     @Throws(IOException::class)
-    private fun parseResponse(connection: HttpURLConnection): ByteArray {
+    private fun HttpURLConnection.readStream(
+        inputStream: InputStream
+    ): ByteArray {
         return try {
-            val inputStream = connection.inputStream
             val outputStream = ByteArrayOutputStream()
             inputStream.copyTo(outputStream, BUFFER_SIZE)
             outputStream.toByteArray()
         } finally {
-            connection.disconnect()
+            disconnect()
         }
     }
 
-    private fun Map<String?, List<String>>.cleanHeaders(): Map<String, String> {
+    private fun Map<String?, List<String>>.asHeaders(): Map<String, String> {
         return filterKeys { it != null }
-            .mapKeys { it.key?.lowercase() ?: "" }
-            .mapValues { it.value.firstOrNull() ?: "" }
+            .mapKeys { it.key!!.trim() }
+            .mapValues { it.value.firstOrNull()?.trim().orEmpty() }
     }
 
     private companion object {

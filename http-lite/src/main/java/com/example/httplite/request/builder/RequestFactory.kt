@@ -1,15 +1,16 @@
-package com.example.httplite.request
+package core.api.request.builder
 
-import com.google.gson.Gson
 import com.example.httplite.model.MediaData
-import core.api.request.Request
 import com.example.httplite.request.builder.FormDataOutputBuilder
+import com.google.gson.Gson
+import com.example.httplite.request.Request
 import java.net.URLEncoder
 import java.util.UUID
 import kotlin.collections.plus
 
 internal class RequestFactory(
     private val baseUrl: String,
+    private val baseHeaders: Map<String, String> = emptyMap(),
     private val baseQueryParams: Map<String, String> = emptyMap<String, String>(),
     private val gson: Gson = Gson()
 ){
@@ -29,7 +30,7 @@ internal class RequestFactory(
             queryPath = queryPath,
             body = body
         )
-        request.headers + ("Content-Type" to "application/json; charset=UTF-8")
+        request.headers += ("Content-Type" to "application/json; charset=UTF-8")
         return request
     }
 
@@ -50,7 +51,7 @@ internal class RequestFactory(
             queryPath = queryPath,
             body = encodedBody.toByteArray()
         )
-        request.headers + ("Content-Type" to "application/x-www-form-urlencoded")
+        request.headers += ("Content-Type" to "application/x-www-form-urlencoded")
         return request
     }
 
@@ -92,7 +93,7 @@ internal class RequestFactory(
         return Request(
             method = method,
             url = url,
-            headers = headers,
+            headers = baseHeaders + headers,
             queryParams = baseQueryParams + queryParams,
             queryPath = queryPath,
             body = body

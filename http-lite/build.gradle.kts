@@ -33,7 +33,7 @@ android {
 
 dependencies {
     implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.gson)
+    api(libs.gson)
 
     testImplementation(libs.junit)
 }

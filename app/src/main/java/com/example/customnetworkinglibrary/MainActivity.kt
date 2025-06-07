@@ -1,6 +1,7 @@
 package com.example.customnetworkinglibrary
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -17,9 +18,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import com.example.customnetworkinglibrary.networking.model.Todo
 import com.example.httplite.client.NetworkClient
-import com.example.httplite.response.ApiResult
+import com.google.gson.JsonSyntaxException
+import java.io.IOException
 
 // TODO: Refactor to MVVM
 class MainActivity : ComponentActivity() {
@@ -41,11 +44,7 @@ class MainActivity : ComponentActivity() {
         var httpResult by remember { mutableStateOf("Loading...") }
 
         LaunchedEffect(Unit) {
-            httpResult = try {
-                fetchTodo(networkClient)
-            } catch (e: Exception) {
-                "${e.message}"
-            }
+            httpResult = fetchTodo(networkClient).toString()
         }
 
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -55,25 +54,30 @@ class MainActivity : ComponentActivity() {
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(text = httpResult)
+                Text(
+                    textAlign = TextAlign.Center,
+                    text = httpResult
+                )
             }
         }
     }
 
-    suspend fun fetchTodo(networkManager: NetworkClient): String {
-        val apiResult = networkManager.get<Todo>(
-            queryPath = "/todos/1",
-            responseClass = Todo::class.java
-        )
+    suspend fun fetchTodo(networkManager: NetworkClient): String? {
+        return try {
+            val apiResult = networkManager.get<Todo>(
+                queryPath = "/todos/1",
+                responseClass = Todo::class.java
+            )
 
-        return when (apiResult) {
-            is ApiResult.Response<Todo> -> {
-                val statusCode = apiResult.statusCode
-                val data = apiResult.data
-                "Status Code: $statusCode, \nData: ${data}"
-            }
-            is ApiResult.SerializationFailed -> apiResult.exception.message.toString()
-            is ApiResult.NetworkFailed -> apiResult.exception.message.toString()
+            val statusCode = apiResult.code
+            val data = apiResult.body
+            "Status Code: $statusCode, \nData: $data"
+        } catch (e: IOException) {
+            Log.e("Networking", "Network request failed", e)
+            e.message
+        } catch (e: JsonSyntaxException) {
+            Log.e("Networking", "JSON parsing failed", e)
+            e.message
         }
     }
 }

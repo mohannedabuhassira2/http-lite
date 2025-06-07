@@ -1,7 +1,7 @@
 package com.example.httplite.request.builder
 
-import com.google.gson.Gson
 import com.example.httplite.model.MediaData
+import com.google.gson.Gson
 import java.io.ByteArrayOutputStream
 import java.util.UUID
 
