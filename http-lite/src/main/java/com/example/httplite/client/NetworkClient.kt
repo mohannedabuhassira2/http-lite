@@ -4,17 +4,22 @@ import android.net.http.HttpResponseCache
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import com.example.httplite.request.Request
+import com.example.httplite.request.builder.RequestFactory
+import com.example.httplite.request.interceptor.RequestInterceptor
 import com.example.httplite.response.ApiResponse
-import core.api.request.builder.RequestFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import java.util.UUID
+import kotlin.jvm.Throws
 
 class NetworkClient(
     private val baseUrl: String,
     baseHeaders: Map<String, String> = emptyMap<String, String>(),
     baseQueryParams: Map<String, String> = emptyMap<String, String>(),
     private val gson: Gson = Gson(),
+    requestInterceptors: List<RequestInterceptor> = emptyList(),
     private val cacheDirectory: String? = null,
     private val cacheSizeBytes: Long = CACHE_SIZE_BYTES
 ) {
@@ -22,6 +27,7 @@ class NetworkClient(
         baseUrl,
         baseHeaders,
         baseQueryParams,
+        requestInterceptors,
         gson
     )
 
@@ -44,7 +50,7 @@ class NetworkClient(
             queryParams = queryParams,
             queryPath = queryPath
         )
-        return parseToApiResult<T>(
+        return apiCall<T>(
             responseClass,
             request
         )
@@ -67,7 +73,7 @@ class NetworkClient(
             queryPath = queryPath,
             body = gson.toJson(body).toByteArray()
         )
-        return parseToApiResult<T>(
+        return apiCall<T>(
             responseClass,
             request
         )
@@ -90,7 +96,7 @@ class NetworkClient(
             queryPath = queryPath,
             encodedBodyParams = encodedBodyParams
         )
-        return parseToApiResult<T>(
+        return apiCall<T>(
             responseClass,
             request
         )
@@ -117,7 +123,7 @@ class NetworkClient(
             dataKey = dataKey,
             boundary = boundary
         )
-        return parseToApiResult<T>(
+        return apiCall<T>(
             responseClass,
             request
         )
@@ -140,7 +146,7 @@ class NetworkClient(
             queryPath = queryPath,
             body = gson.toJson(body).toByteArray()
         )
-        return parseToApiResult<T>(
+        return apiCall<T>(
             responseClass,
             request
         )
@@ -163,7 +169,7 @@ class NetworkClient(
             queryPath = queryPath,
             encodedBodyParams = encodedBodyParams
         )
-        return parseToApiResult<T>(
+        return apiCall<T>(
             responseClass,
             request
         )
@@ -190,25 +196,24 @@ class NetworkClient(
             dataKey = dataKey,
             boundary = boundary
         )
-        return parseToApiResult<T>(
+        return apiCall<T>(
             responseClass,
             request
         )
     }
 
-    @Throws (IOException::class, JsonSyntaxException::class)
-    private suspend fun <T> parseToApiResult(
+    private suspend fun <T> apiCall(
         responseClass: Class<T>,
         request: Request
-    ): ApiResponse<T> {
-        val httpResponse = request.execute()
-        val jsonBody = httpResponse.body
-        val errorBody = httpResponse.errorBody
-        val code = httpResponse.code
-        val headers = httpResponse.headers
+    ): ApiResponse<T> = withContext(Dispatchers.IO) {
+        val rawResponse = request.executeWithInterceptors()
+        val jsonBody = rawResponse.body
+        val errorBody = rawResponse.errorBody
+        val code = rawResponse.code
+        val headers = rawResponse.headers
 
-        if (httpResponse.code !in 200..299) {
-            return ApiResponse<T>(
+        if (rawResponse.code !in 200..299) {
+             ApiResponse<T>(
                 body = null,
                 code = code,
                 headers = headers,
@@ -221,7 +226,7 @@ class NetworkClient(
             jsonBody,
         )
 
-        return ApiResponse<T>(
+        ApiResponse<T>(
             body = parsedBody,
             code = code,
             headers = headers,
@@ -268,4 +273,3 @@ class NetworkClient(
         const val CACHE_SIZE_BYTES = 128 * 1024L
     }
 }
-

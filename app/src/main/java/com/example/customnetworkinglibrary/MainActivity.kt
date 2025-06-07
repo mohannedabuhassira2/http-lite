@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import com.example.customnetworkinglibrary.networking.RetryInterceptor
 import com.example.customnetworkinglibrary.networking.model.Todo
 import com.example.httplite.client.NetworkClient
 import com.google.gson.JsonSyntaxException
@@ -27,7 +28,10 @@ import java.io.IOException
 // TODO: Refactor to MVVM
 class MainActivity : ComponentActivity() {
     private val networkClient = NetworkClient(
-        baseUrl = "https://jsonplaceholder.typicode.com"
+        baseUrl = "https://jsonplaceholder.typicode.com",
+        requestInterceptors = listOf(
+            RetryInterceptor()
+        )
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {

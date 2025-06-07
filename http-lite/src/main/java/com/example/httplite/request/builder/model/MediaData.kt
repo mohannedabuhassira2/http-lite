@@ -1,4 +1,4 @@
-package com.example.httplite.model
+package com.example.httplite.request.builder.model
 
 import java.io.File
 

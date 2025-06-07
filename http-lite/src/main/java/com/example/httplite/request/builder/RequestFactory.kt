@@ -1,9 +1,8 @@
-package core.api.request.builder
+package com.example.httplite.request.builder
 
-import com.example.httplite.model.MediaData
-import com.example.httplite.request.builder.FormDataOutputBuilder
 import com.google.gson.Gson
 import com.example.httplite.request.Request
+import com.example.httplite.request.interceptor.RequestInterceptor
 import java.net.URLEncoder
 import java.util.UUID
 import kotlin.collections.plus
@@ -12,6 +11,7 @@ internal class RequestFactory(
     private val baseUrl: String,
     private val baseHeaders: Map<String, String> = emptyMap(),
     private val baseQueryParams: Map<String, String> = emptyMap<String, String>(),
+    private val requestInterceptors: List<RequestInterceptor> = emptyList(),
     private val gson: Gson = Gson()
 ){
     fun createJsonRequest(
@@ -20,15 +20,16 @@ internal class RequestFactory(
         headers: Map<String, String> = emptyMap(),
         queryParams: Map<String, String> = emptyMap(),
         queryPath: String = "",
-        body: ByteArray? = null
+        body: ByteArray? = null,
     ): Request {
-        var request = createBasicRequest(
+        val request = createBasicRequest(
             method = method,
             url = url,
             headers = headers,
             queryParams = queryParams,
             queryPath = queryPath,
-            body = body
+            body = body,
+            requestInterceptors = requestInterceptors
         )
         request.headers += ("Content-Type" to "application/json; charset=UTF-8")
         return request
@@ -49,7 +50,8 @@ internal class RequestFactory(
             headers = headers,
             queryParams = queryParams,
             queryPath = queryPath,
-            body = encodedBody.toByteArray()
+            body = encodedBody.toByteArray(),
+            requestInterceptors = requestInterceptors
         )
         request.headers += ("Content-Type" to "application/x-www-form-urlencoded")
         return request
@@ -63,12 +65,13 @@ internal class RequestFactory(
         queryPath: String = "",
         dataKey: String,
         data: Map<String, Any>,
-        boundary: String = UUID.randomUUID().toString()
+        boundary: String = UUID.randomUUID().toString(),
     ): Request {
-        val body = buildFormDataBody(
+        val builder = FormDataBodyBuilder(
             data = data,
             dataKey = dataKey,
-            boundary = boundary
+            boundary = boundary,
+            gson = gson
         )
         val request = Request(
             method = method,
@@ -76,7 +79,8 @@ internal class RequestFactory(
             headers = headers,
             queryParams = queryParams,
             queryPath = queryPath,
-            body = body
+            body = builder.buildFormDataBody(),
+            requestInterceptors = requestInterceptors
         )
         request.headers += ("Content-Type" to "multipart/form-data; boundary=$boundary")
         return request
@@ -88,7 +92,8 @@ internal class RequestFactory(
         headers: Map<String, String> = emptyMap(),
         queryParams: Map<String, String> = emptyMap(),
         queryPath: String = "",
-        body: ByteArray? = null
+        body: ByteArray? = null,
+        requestInterceptors: List<RequestInterceptor>
     ): Request {
         return Request(
             method = method,
@@ -96,26 +101,9 @@ internal class RequestFactory(
             headers = baseHeaders + headers,
             queryParams = baseQueryParams + queryParams,
             queryPath = queryPath,
-            body = body
+            body = body,
+            requestInterceptors = requestInterceptors
         )
-    }
-
-    private fun buildFormDataBody(
-        data: Map<String, Any>,
-        dataKey: String,
-        boundary: String
-    ): ByteArray {
-        val builder = FormDataOutputBuilder(boundary, gson)
-
-        data.forEach { (key, value) ->
-            val fieldName = "$dataKey[$key]"
-            when (value) {
-                is MediaData -> builder.writeMediaPart(fieldName, value)
-                else -> builder.writeJsonPart(fieldName, value)
-            }
-        }
-
-        return builder.writeEndBoundary().toByteArray()
     }
 
     private fun Map<String, String>.toUrlEncodedBody(): String {
